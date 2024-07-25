@@ -1,0 +1,91 @@
+#define TONE_PIN 8
+#define START_BUTTON_PIN 7
+#define DOT_BUTTON_PIN 6
+#define DASH_BUTTON_PIN 5
+
+const int dotDuration = 100;  // Duration of a dot in milliseconds
+const int dashDuration = dotDuration * 3;  // Duration of a dash
+const int symbolSpace = dotDuration;  // Space between symbols in a character
+const int letterSpace = dotDuration * 2;  // Space between letters
+const int wordSpace = dotDuration * 3;  // Space between words
+
+String message = "CQ CQ CQ DE KB3HXA";
+
+String morseCode[] = {
+  ".-", "-...", "-.-.", "-..", ".", "..-.", "--.", "....", "..", // A-I
+  ".---", "-.-", ".-..", "--", "-.", "---", ".--.", "--.-", ".-.", // J-R
+  "...", "-", "..-", "...-", ".--", "-..-", "-.--", "--..",  // S-Z
+  "-----", ".----", "..---", "...--", "....-", ".....", "-....", "--...", "---..", "----."  // 0-9
+};
+
+void setup() {
+  pinMode(TONE_PIN, OUTPUT);
+  pinMode(START_BUTTON_PIN, INPUT_PULLUP);
+  pinMode(DOT_BUTTON_PIN, INPUT_PULLUP);
+  pinMode(DASH_BUTTON_PIN, INPUT_PULLUP);
+  Serial.begin(9600);
+  Serial.println("Enter Morse code message:");
+}
+
+void loop() {
+  if (Serial.available() > 0) {
+    message = Serial.readStringUntil('\n');
+    message.trim();
+    message.toUpperCase();
+    Serial.println("Message updated: " + message);
+  }
+
+  if (digitalRead(START_BUTTON_PIN) == LOW) {
+    delay(50);  // Debounce delay
+    if (digitalRead(START_BUTTON_PIN) == LOW) {
+      sendMessage(message);
+      while (digitalRead(START_BUTTON_PIN) == LOW);  // Wait for button release
+      delay(50);  // Debounce delay
+    }
+  }
+
+  if (digitalRead(DOT_BUTTON_PIN) == LOW) {
+    manualDot();
+  }
+
+  if (digitalRead(DASH_BUTTON_PIN) == LOW) {
+    manualDash();
+  }
+}
+
+void sendMessage(String msg) {
+  for (int i = 0; i < msg.length(); i++) {
+    if (msg[i] == ' ') {
+      delay(wordSpace);
+    } else if (msg[i] >= 'A' && msg[i] <= 'Z') {
+      sendMorse(morseCode[msg[i] - 'A']);
+      delay(letterSpace);
+    } else if (msg[i] >= '0' && msg[i] <= '9') {
+      sendMorse(morseCode[msg[i] - '0' + 26]);
+      delay(letterSpace);
+    }
+  }
+}
+
+void sendMorse(String code) {
+  for (int i = 0; i < code.length(); i++) {
+    if (code[i] == '.') {
+      tone(TONE_PIN, 1000, dotDuration);
+      delay(dotDuration);
+    } else if (code[i] == '-') {
+      tone(TONE_PIN, 1000, dashDuration);
+      delay(dashDuration);
+    }
+    delay(symbolSpace);
+  }
+}
+
+void manualDot() {
+  tone(TONE_PIN, 1000, dotDuration);
+  delay(dotDuration + symbolSpace);
+}
+
+void manualDash() {
+  tone(TONE_PIN, 1000, dashDuration);
+  delay(dashDuration + symbolSpace);
+}
